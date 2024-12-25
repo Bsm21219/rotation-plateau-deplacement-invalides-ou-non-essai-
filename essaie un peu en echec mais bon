@@ -1,0 +1,223 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Définition des constantes pour les types de pions et les couleurs
+#define PION_BLEU 1
+#define DAME_BLEU 2
+#define PION_ROUGE 3
+#define DAME_ROUGE 4
+#define PION_JAUNE 5
+#define DAME_JAUNE 6
+#define PION_VERT 7
+#define DAME_VERT 8
+#define CASE_VIDE 0
+
+// Dimensions du plateau
+#define TAILLE 17 // Le plateau est 17x17
+
+// Codes ANSI pour les couleurs
+#define RESET "\033[0m"
+#define FOND_CYAN "\033[46m"
+#define FOND_NOIR "\033[40m"
+#define FOND_BLANC "\033[47m"
+#define TXT_BLEU "\033[34m"
+#define TXT_ROUGE "\033[31m"
+#define TXT_JAUNE "\033[33m"
+#define TXT_VERT "\033[32m"
+
+// Structure du plateau de jeu
+typedef struct {
+    int index[TAILLE][TAILLE]; // État du plateau
+    int nb_bleu, nb_rouge, nb_jaune, nb_vert; // Nombre de pions pour chaque couleur
+} Damier;
+
+// Liste des joueurs dans l'ordre de rotation
+#define NOMBRE_JOUEURS 4
+char* joueurs[NOMBRE_JOUEURS] = {"Bleu", "Rouge", "Jaune", "Vert"};
+int joueur_actuel = 0; // Le joueur qui joue actuellement
+
+/*
+ * Vérifie si une cellule appartient à l'un des 4 coins cyans de la matrice qui sont non affectables.
+ */
+int Coin_Cyan(int i, int j) {
+    return ((i >= 0 && i < 4 && j >= 0 && j < 4) ||       // Coin supérieur gauche
+            (i >= 13 && i < TAILLE && j >= 0 && j < 4) || // Coin inférieur gauche
+            (i >= 0 && i < 4 && j >= 13 && j < TAILLE) || // Coin supérieur droit
+            (i >= 13 && i < TAILLE && j >= 13 && j < TAILLE)); // Coin inférieur droit
+}
+
+/*
+ * Vérifie si une case est une case vide et valide pour un pion.
+ */
+int case_valide(int x, int y) {
+    // La case est invalide si elle est blanche ou cyan
+    return !(Coin_Cyan(x, y) || (x + y) % 2 == 0);
+}
+
+/*
+ * Initialise le damier avec les pions dans les positions de départ.
+ */
+void init_damier(Damier* jeu) {
+    // Initialisation des nombres de pions
+    jeu->nb_bleu = 22;
+    jeu->nb_rouge = 22;
+    jeu->nb_jaune = 22;
+    jeu->nb_vert = 22;
+
+    // Initialisation du tableau
+    for (int i = 0; i < TAILLE; i++) {
+        for (int j = 0; j < TAILLE; j++) {
+            jeu->index[i][j] = CASE_VIDE;
+        }
+    }
+
+    // Placement des pions bleus (haut)
+    for (int i = 0; i < 5; i++) {
+        for (int j = 4; j < 13; j++) {
+            if ((i + j) % 2 == 1) { // Cases noires seulement
+                jeu->index[i][j] = PION_BLEU;
+            }
+        }
+    }
+
+    // Placement des pions rouges (bas)
+    for (int i = 12; i < 17; i++) {
+        for (int j = 4; j < 13; j++) {
+            if ((i + j) % 2 == 1) { // Cases noires seulement
+                jeu->index[i][j] = PION_ROUGE;
+            }
+        }
+    }
+
+    // Placement des pions jaunes (droite)
+    for (int i = 4; i < 13; i++) {
+        for (int j = 12; j < TAILLE; j++) {
+            if ((i + j) % 2 == 1) { // Cases noires seulement
+                jeu->index[i][j] = PION_JAUNE;
+            }
+        }
+    }
+
+    // Placement des pions verts (gauche)
+    for (int i = 4; i < 13; i++) {
+        for (int j = 0; j < 5; j++) {
+            if ((i + j) % 2 == 1) { // Cases noires seulement
+                jeu->index[i][j] = PION_VERT;
+            }
+        }
+    }
+}
+
+// Affiche une cellule selon son état dans le damier
+void afficher_Cellule(int i, int j, int index[TAILLE][TAILLE]) {
+    if (Coin_Cyan(i, j)) {
+        printf(FOND_CYAN "   " RESET); // Fond cyan sans traits noirs
+    } else {
+        switch (index[i][j]) {
+            case PION_BLEU:
+                printf(FOND_NOIR TXT_BLEU " ● " RESET);
+                break;
+            case DAME_BLEU:
+                printf(FOND_NOIR TXT_BLEU "[O]" RESET);
+                break;
+            case PION_ROUGE:
+                printf(FOND_NOIR TXT_ROUGE " ● " RESET);
+                break;
+            case DAME_ROUGE:
+                printf(FOND_NOIR TXT_ROUGE "[O]" RESET);
+                break;
+            case PION_JAUNE:
+                printf(FOND_NOIR TXT_JAUNE " ● " RESET);
+                break;
+            case DAME_JAUNE:
+                printf(FOND_NOIR TXT_JAUNE "[O]" RESET);
+                break;
+            case PION_VERT:
+                printf(FOND_NOIR TXT_VERT " ● " RESET);
+                break;
+            case DAME_VERT:
+                printf(FOND_NOIR TXT_VERT "[O]" RESET);
+                break;
+            case CASE_VIDE:
+                if ((i + j) % 2 == 0) {
+                    printf(FOND_BLANC "   " RESET);
+                } else {
+                    printf(FOND_NOIR "   " RESET);
+                }
+                break;
+            default:
+                printf(" ? ");
+                break;
+        }
+    }
+}
+
+//Affiche le damier complet avec les indices en haut et à gauche
+void afficher_Damier(Damier* jeu) {
+    printf("    ");
+    for (int j = 0; j < TAILLE; j++) {
+        printf(TXT_BLEU "%c  " RESET, 'a' + j);
+    }
+    printf("\n");
+
+    for (int i = 0; i < TAILLE; i++) {
+        printf(TXT_BLEU " %c " RESET, 'A' + i);
+        for (int j = 0; j < TAILLE; j++) {
+            afficher_Cellule(i, j, jeu->index);
+        }
+        printf("\n");
+    }
+}
+
+// Vérifie si un déplacement est valide selon les règles du jeu des dames
+int deplacement_valide(Damier* jeu, int x_depart, int y_depart, int x_arrivee, int y_arrivee) {
+    int pion = jeu->index[x_depart][y_depart];
+
+    // Vérifier que les coordonnées de départ et d'arrivée sont valides ou non
+    if (x_arrivee < 0 || x_arrivee >= TAILLE || y_arrivee < 0 || y_arrivee >= TAILLE) {
+        printf("Coordonnées hors du plateau.\n");
+        return 0;
+    }
+
+    // Vérifier que la case d'arrivée est vide et valide
+    if (!case_valide(x_arrivee, y_arrivee)) {
+        printf("Case d'arrivée invalide (blanche ou cyan).\n");
+        return 0;
+    }
+
+    if (jeu->index[x_arrivee][y_arrivee] != CASE_VIDE) {
+        printf("La case d'arrivée est occupée.\n");
+        return 0;
+    }
+
+    // Vérification des déplacements selon la couleur du joueur
+    switch (pion) {
+        case PION_BLEU:
+            if (x_arrivee == x_depart - 1 && (y_arrivee == y_depart - 1 || y_arrivee == y_depart + 1)) {
+                return 1; // Déplacement diagonale pour un pion bleu
+            }
+            break;
+        case PION_ROUGE:
+            if (x_arrivee == x_depart + 1 && (y_arrivee == y_depart - 1 || y_arrivee == y_depart + 1)) {
+                return 1; // Déplacement diagonale pour un pion rouge
+            }
+            break;
+        case PION_JAUNE:
+            if (x_arrivee == x_depart - 1 && (y_arrivee == y_depart - 1 || y_arrivee == y_depart + 1)) {
+                return 1; // Déplacement diagonale pour un pion jaune
+            }
+            break;
+        case PION_VERT:
+            if (x_arrivee == x_depart + 1 && (y_arrivee == y_depart - 1 || y_arrivee == y_depart + 1)) {
+                return 1; // Déplacement diagonale pour un pion vert
+            }
+            break;
+        default:
+            printf("Type de pion non reconnu.\n");
+            return 0;
+    }
+
+    return 0;
+}
+
